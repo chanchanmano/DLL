@@ -1,0 +1,126 @@
+import tensorflow as tf
+from tensorflow import keras
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.utils import to_categorical, plot_model
+from tensorflow.keras.datasets import mnist
+
+mnist=keras.datasets.mnist # Loading the dataset
+((xtrain,ytrain),(xtest,ytest)) = mnist.load_data()
+print(xtrain.shape)
+print(ytrain.shape)
+print(xtest.shape)
+print(ytest.shape)
+print(ytrain)
+
+class_names =['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+
+index=0
+plt.imshow(xtrain[index], cmap=plt.cm.binary) # printing 10th image. You may use cmap='gray'
+plt.colorbar() # shows the bar on the right side of the image
+plt.grid(True) # will shot the grid
+plt.show()
+print("Class ID: %s and Class name: %s" % (ytrain[index], class_names[ytrain[index]]))
+
+#View Training Set
+plt.figure(figsize=(10,10))
+for i in range(25): # 25 images
+    plt.subplot(5,5,i+1) # matrix of 5 X 5 array
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(xtrain[i], cmap=plt.cm.binary) # printing binary/black and white image
+    plt.xlabel("%s %s" % (ytrain[i], class_names[ytrain[i]])) # Assigning name to each image
+plt.show()
+
+
+xtrain = xtrain/255 # So, we are scale the value between 0 to 1 before by deviding each value by 255
+print(xtrain.shape)
+xtest = xtest/255 # So, we are scale the value between 0 to 1 before by deviding each value by 255
+print(xtest.shape)
+
+
+# Before one hot encoding
+print("ytrain Shape: %s and value: %s" % (ytrain.shape, ytrain))
+print("ytest Shape: %s and value: %s" % (ytest.shape, ytest))
+ytrain=to_categorical(ytrain)
+ytest=to_categorical(ytest)
+# After one hot encoding
+print("ytrain Shape: %s and value: %s" % (ytrain.shape, ytrain[0]))
+print("ytest Shape: %s and value: %s" % (ytest.shape, ytest[1]))
+
+
+from tensorflow.keras import models, layers
+# create a sequential model
+model=models.Sequential()
+
+model.add(layers.Conv2D(6,(3,3),input_shape=(28,28,1),activation='relu'))
+# Add the max pooling layer
+model.add(layers.MaxPooling2D(pool_size=(2,2)))
+# Add Second convolutional block
+model.add(layers.Conv2D(10,(3,3),activation='relu'))
+# Add the max pooling layer
+model.add(layers.MaxPooling2D(pool_size=(2,2)))
+
+
+# Flatten layer.
+model.add(layers.Flatten(input_shape=(28,28)))
+# fully connected network
+model.add(layers.Dense(128, activation='relu'))
+model.add(layers.Dense(100, activation='relu'))
+model.add(layers.Dense(80, activation='relu'))
+# Add the output layer
+model.add(layers.Dense(10, activation='softmax'))
+
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.summary()
+
+# Train the model
+xtrain2=xtrain.reshape(60000,28,28,1)
+xtest2=xtest.reshape(10000,28,28,1)
+model.fit(xtrain2,ytrain,epochs=20,batch_size=1000,verbose=True,validation_data=(xtest2,ytest))
+
+# evaluate accuracy of the model
+test_loss, test_acc = model.evaluate(xtest2, ytest)
+print("accuracy:", test_acc)
+
+
+# creating a funtion which will help to verify the prediction is true of not
+def plot_image(i, predictions_array, true_label, img): # taking index and 3 arrays viz. prediction array, true label array and image array
+    predictions_array, true_label, img = predictions_array[i], true_label[i], img[i]
+    plt.grid(False)
+    plt.xticks([])
+    plt.yticks([])
+    plt.imshow(img, cmap=plt.cm.binary) # showing b/w image
+    predicted_label=np.argmax(predictions_array)
+    true_label=np.argmax(true_label)
+    # print(predicted_label)
+    # print(true_label)
+    if predicted_label == true_label: #setting up label color
+        color='blue' # correct then blue colour
+    else:
+        color='red' # wrong then red colour
+    plt.xlabel("{} {:2.0f}% ({})".format(class_names[predicted_label], 100*np.max(predictions_array), class_names[true_label]), color=color)
+def plot_value_array(i, predictions_array, true_label): # taking index along with predictions and true label array
+    predictions_array, true_label = predictions_array[i], true_label[i]
+    plt.grid(False)
+    plt.xticks([])
+    plt.yticks([])
+    thisplot=plt.bar(range(10), predictions_array, color='gray')
+    plt.ylim([0,1])
+    predicted_label=np.argmax(predictions_array)
+    true_label=np.argmax(true_label)
+    thisplot[predicted_label].set_color('red')
+    thisplot[true_label].set_color('green')
+    
+predictions=model.predict(xtest2)
+# call the function
+# defining parameters to pass to function
+i=12 # image number 56. You may change value of i for play around
+plt.figure(figsize=(6,3))
+plt.subplot(1,2,1)
+plot_image(i, predictions, ytest, xtest)
+plt.subplot(1,2,2)
+plot_value_array(i, predictions, ytest)
+plt.show()
